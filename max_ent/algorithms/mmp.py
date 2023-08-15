@@ -1,8 +1,11 @@
 ###The following implementation is based on the max margin method. Refer to P. Abbeel and A. Y. Ng, “Apprenticeship Learning via Inverse Reinforcement Learning.” for the algorithm below.
 
 import numpy as np
+from max_ent.algorithms import rl as RL
+from numpy.linalg import norm
 
-# Input: feat
+### Input: Feature Matrix (phi), D (demonstration set)
+### Output: Expected Feature Frequencies 
 def ef_from_trajectories(features, trajectories):
     n_features = features.shape[-1]
 
@@ -14,8 +17,9 @@ def ef_from_trajectories(features, trajectories):
 
     return fe / len(trajectories)
 
-# Input: # of states, # of actions, D (Demonstration set)
-# Output: P_start ()
+
+### Input: # of states, # of actions, D (Demonstration set)
+### Output: P_start ()
 def initial_probabilities(n_states, n_actions, trajectories):
     initial = np.zeros((n_states, n_actions))
     for t in trajectories:
@@ -24,79 +28,51 @@ def initial_probabilities(n_states, n_actions, trajectories):
     return initial / len(trajectories)
 
 
-
-def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
-         eps=1e-4, eps_error=1e-2, burnout=100, max_iter=10000, max_penalty=200, log=None, initial_omega=None):
+###
+def projection_irl(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
+         eps=1e-4, eps_error=1e-2, burnout=10, max_iter=10000, max_penalty=200, log=None, initial_omega=None):
 
     n_states, n_actions, _, n_features = features.shape
 
     # Don't count transitions that start with a terminal state
     features[terminal] = 0
 
-    # compute static properties from trajectories
+    # Compute expert feature expectation from expe rt demonstrations
     expert_features = ef_from_trajectories(features, trajectories)
+    # Compute probability of a state being the initial start state
     p_initial = initial_probabilities(n_states, n_actions, trajectories)
+    # Nominal reward vector is already known
     nominal_rewards = np.array(nominal_rewards)
 
-    omega = init(n_features)
+    ## Variables we will keep track of during iteration
+    omega_list = [] # list of weight vectors for each iteration
+    omega = init(n_features) # current weight vector
     if initial_omega is not None:
         omega = initial_omega.copy()
-    delta = mean_error = np.inf
+    delta = mean_error = np.inf 
+    margin_list = [] # list of margin for each iteration
+    margin = 1 # current margin; dummy margin set to start
 
-    #optim.reset(omega)  --> replace with our choice of optimizer
-    epoch = 0
-    best = None
-    best_error = 100000
-    while epoch <= burnout or (delta > eps and mean_error > eps_error and epoch < max_iter):
-        omega_old = omega.copy()
+    feature_expectations = []
+    feature_expectations_temp = []
 
-        # compute per-state reward
-        reward = nominal_rewards - features @ omega
+    for i in range(burnout):
+        print("Iteration: ", i)
+        if i==0:
+            # First, compute random policy. To do this, we need a reward function to use for value iteration.
+            reward = nominal_rewards - features @ omega # initial reward function
+            q_function, v_function = RL.value_iteration(p_transition, reward, discount)
+            policy = RL.stochastic_policy_from_q_value(world, q_function, omega) #confused on this step
+            #compute ef from this policy
+            feature_expectations.append()
+            omega_list.append(omega)
+            margin_list.append(margin)
+        else:
+            if i==1:
+                feature_expectations_temp.append(feature_expectations[i-1])
+                omega_list.append(expert_features-feature_expectations[i-1])
+                margin.append(norm((expert_features-feature_expectations_temp[i-1]),2))
 
-        # Backward, Forward
-        # Takes in reward and spits out initial policy. We want to to do this in style of mmp rather than max ent inference procedure
-        policy = backward_causal(p_transition, reward, terminal, discount) 
-        d = forward(p_transition, p_initial, policy, terminal)
-
-        # compute the gradient
-        # df[i] is the expected visitation for feature i accross all (s, a, s_)
-        # df[i] = [d[s, a, s_, i] * features[s, a, s_, i] for all (s, a, s_)].sum()
-        df = (d[:, :, :, None] * features).sum((0, 1, 2))
-        grad = df - expert_features
-
-        mean_error = np.abs(grad).mean()
-
-        if epoch >= burnout and mean_error < best_error:
-            best = omega.copy()
-            best_error = mean_error
-
-        # perform optimization step and compute delta for convergence
-        optim.step(grad)
-
-        if omega.max() > max_penalty:
-            omega = omega * (max_penalty / omega.max())
-            optim.reset(omega)
-
-        delta = np.max(np.abs(omega_old - omega))
-
-        if log is not None and type(log) == list:
-            log.append({
-                'omega': omega_old.copy(),
-                'delta': delta,
-                'epoch': epoch,
-                'mean_error': mean_error,
-                'is_best': mean_error == best_error,
-                'best_omega': omega_old.copy() if best is None else best.copy(),
-                'best_reward': reward
-            })
-
-        if epoch % 100 == 0:
-            print(f'MAE(best): {min(mean_error, best_error): 0.15f}')
-        epoch += 1
-
-    print(f'Finished with MAE(best): {best_error: 0.15f}')
-
-    return best if best is not None else omega
 
 
 def _softmax(x1, x2):
