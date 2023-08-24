@@ -48,6 +48,7 @@ def plot_world(title, mdp, state_rewards, action_rewards, color_rewards,
     ax = fig.add_subplot(spec[1, 10])
     P.plot_colors(ax, color_rewards, vmin=vmin, vmax=vmax, cmap=cm)
     plt.draw()
+    plt.show()
     return fig
 
 
