@@ -117,9 +117,9 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
             # First, compute random policy. To do this, we need a reward function to use for value iteration.
             reward = nominal_rewards - features @ omega # initial reward function
             q_function, v_function = RL.value_iteration(p_transition, reward, discount)
-            policy = RL.stochastic_policy_from_q_value(q_function) #confused on this step
+            policy = RL.stochastic_policy_from_q_value(q_function) #get policy from running RL with initial reward function
             policy_list.append(policy)
-            #compute ef from this policy
+            #compute ef from this policy - renamed to D to match with paper
             d = forward(p_transition, p_initial, policy, terminal)
             df = (d[:, :, :, None] * features).sum((0, 1, 2))
             feature_expectations.append(df)
