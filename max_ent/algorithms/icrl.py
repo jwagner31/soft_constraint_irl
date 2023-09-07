@@ -119,18 +119,14 @@ def icrl(nominal_rewards, p_transition, features, terminal, trajectories, optim,
 
         # Backward, Forward
         policy = backward_causal(p_transition, reward, terminal, discount)
-        print("policy shape: ", policy.shape)
+
         d = forward(p_transition, p_initial, policy, terminal)
-        print("d shape: ", d.shape)
         # compute the gradient
         # df[i] is the expected visitation for feature i accross all (s, a, s_)
         # df[i] = [d[s, a, s_, i] * features[s, a, s_, i] for all (s, a, s_)].sum()
         df = (d[:, :, :, None] * features).sum((0, 1, 2))
         grad = df - e_features
-
         mean_error = np.abs(grad).mean()
-        print("df shape: ", df.shape)
-        print("ef: ", e_features.shape)
 
         if epoch >= burnout and mean_error < best_error:
             best = omega.copy()

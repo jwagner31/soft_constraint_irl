@@ -84,7 +84,7 @@ def initial_probabilities(n_states, n_actions, trajectories):
 
 ###
 def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
-         eps=1e-4, eps_error=1e-2, burnout=100, max_iter=10000, max_penalty=200, log=None, initial_omega=None):
+         eps=1e-4, eps_error=1e-2, burnout=30, max_iter=10000, max_penalty=200, log=None, initial_omega=None):
 
     n_states, n_actions, _, n_features = features.shape
 
@@ -93,6 +93,7 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
 
     # Compute expert feature expectation from expert demonstrations
     expert_features = ef_from_trajectories(features, trajectories)
+    print("", expert_features.shape)
     # Compute probability of a state being the initial start state
     p_initial = initial_probabilities(n_states, n_actions, trajectories)
     # Nominal reward vector is already known
@@ -122,6 +123,7 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
             #compute ef from this policy - renamed to D to match with paper
             d = forward(p_transition, p_initial, policy, terminal)
             df = (d[:, :, :, None] * features).sum((0, 1, 2))
+            print(df.shape)
             feature_expectations.append(df)
             omega_list.append(omega)
             margin_list.append(margin)
@@ -147,8 +149,8 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
 
                 print("margin: ",margin_list[i]) 
             
-            if(margin <= eps):
-                break
+            #if(margin <= eps):
+             #   break
             
             # Compute opimal policy using RL, then use that policy to get feature expectation
             reward = nominal_rewards - features @ omega
@@ -162,8 +164,8 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
             mean_error = np.abs(df - expert_features).mean()
             print(mean_error)
             delta = np.max(np.abs(omega_list[i-1] - omega))
-            if(delta <= eps):
-                break
+            #if(delta <= eps):
+              #  break
     return omega_list[-1]
 
 

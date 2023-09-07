@@ -132,7 +132,7 @@ def learn_constraints(nominal_rewards, world, terminal, trajectories,
     init = O.Constant(1e-6)
     optim = O.ExpSga(lr=lr, clip_grad_at=clip_grad_at)
 
-    omega = MMP.mmp(nominal_rewards, world.p_transition, world.phi,
+    omega = ICRL.icrl(nominal_rewards, world.p_transition, world.phi,
                       terminal, trajectories, optim, init, discount,
                       max_iter=max_iter, burnout=burn_out, eps=eps, log=log, initial_omega=initial_omega)
 
