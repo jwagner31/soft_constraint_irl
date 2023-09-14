@@ -3,6 +3,7 @@
 import numpy as np
 from max_ent.algorithms import rl as RL
 from numpy.linalg import norm
+import math
 
 ### Input: Feature Matrix (phi), D (demonstration set)
 ### Output: Expected Feature Frequencies 
@@ -47,30 +48,25 @@ def forward(p_transition, p_initial, policy, terminal, eps=1e-5):
 
     return d_transition
 
-def ef_from_policy(features, policy):
+def feature_expectation_from_policy(features, policy):
     n_features = features.shape[-1]
+    n_states, n_actions, _, _ = features.shape
 
     fe = np.zeros(n_features)
 
-""""
-def getFeatureExpectation(Q,N=1000):
-    observationSum=np.zeros(4)
-    for i in range(N):
-        observation=env.reset()
-        done=False
-        cnt=0
-        while not done:
-            state=get_state_as_string(assign_bins(observation, bins))
-            act=max_dict(Q[state])[0]
-            observation,reward,done,_=env.step(act)
-            observation=sigmoid(observation)
-            observationSum+=(GAMMA**cnt)*observation
-            cnt+=1
-    featureExpectation=observationSum/N
-    
-    print("FeatureExpectation: ",featureExpectation)
-    return featureExpectation
-"""
+    for s in range(n_states):
+        for a in range(n_actions):
+            fe += policy[s, a] * features[s, a, :, :]
+
+    return fe
+
+
+def sigmoid(arry):
+    sig=[]
+    for i in arry:
+        sig.append(1/(1+math.exp(-i)))           
+    return np.array(sig)
+
 
 ### Input: # of states, # of actions, D (Demonstration set)
 ### Output: P_start ()
@@ -81,6 +77,7 @@ def initial_probabilities(n_states, n_actions, trajectories):
         initial[s, a] += 1
     return initial / len(trajectories)
 
+#Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
 
 ###
 def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
@@ -93,7 +90,6 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
 
     # Compute expert feature expectation from expert demonstrations
     expert_features = ef_from_trajectories(features, trajectories)
-    print("", expert_features.shape)
     # Compute probability of a state being the initial start state
     p_initial = initial_probabilities(n_states, n_actions, trajectories)
     # Nominal reward vector is already known
@@ -116,7 +112,7 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
         print("Iteration: ", i)
         if i==0: #initialize variables
             # First, compute random policy. To do this, we need a reward function to use for value iteration.
-            reward = nominal_rewards - features @ omega # initial reward function
+            reward = features @ omega # initial reward function
             q_function, v_function = RL.value_iteration(p_transition, reward, discount)
             policy = RL.stochastic_policy_from_q_value(q_function) #get policy from running RL with initial reward function
             policy_list.append(policy)
