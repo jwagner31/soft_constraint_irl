@@ -4,6 +4,71 @@ import numpy as np
 from max_ent.algorithms import rl as RL
 from numpy.linalg import norm
 import math
+import max_ent.gridworld.trajectory as T
+
+def backward_causal(p_transition, reward, terminal, discount, eps=1e-5):
+    n_states, _, n_actions = p_transition.shape
+
+    # set up terminal reward function
+    if len(terminal) == n_states:
+        reward_terminal = np.array(terminal, dtype=np.float)
+    else:
+        reward_terminal = -np.inf * np.ones(n_states)
+        reward_terminal[terminal] = 0.0
+
+    # compute state log partition V and state-action log partition Q
+    v = -1e200 * np.ones(n_states)  # np.dot doesn't behave with -np.inf
+
+    p_t = discount * np.moveaxis(p_transition, 1, 2)
+    r = (reward * p_t).sum(-1)  # computes the state-action rewards
+
+    delta = np.inf
+
+    while delta > eps:
+        v_old = v
+        q = r + p_t @ v_old
+
+        v = reward_terminal
+        for a in range(n_actions):
+            v = _softmax(v, q[:, a])
+
+        delta = np.max(np.abs(v - v_old))
+
+    # compute and return policy
+    return np.exp(q - v[:, None])
+
+
+def forward(p_transition, p_initial, policy, terminal, eps=1e-5):
+    # Don't allow transitions from terminal
+    p_t = np.moveaxis(p_transition.copy(), 1, 2)
+    p_terminal = p_t[terminal, :, :].copy()
+    p_t[terminal, :, :] = 0.0
+
+    d = p_initial.sum(1)
+    d_total = d
+
+    delta = np.inf
+    while delta > eps:
+        # state-action expected visitation
+        d_sa = d[:, None] * policy
+        # for each state s, multiply the expected visitations of all states to s by their probabilities
+        # d_s = sum(sa_ev[s_from, a] * p_t[s_from, a, s] for all s_from, a)
+        d_ = (d_sa[:, :, None] * p_t).sum((0, 1))
+
+        delta = np.max(np.abs(d - d_))
+        d = d_
+        d_total += d
+
+    p_t[terminal, :, :] = p_terminal
+    # Distribute the visitation stats of satate to their actions
+    d_sa = d_total[:, None] * policy
+
+    # Distribute state-action visitations to the next states
+    d_transition = d_sa[:, :, None] * p_t
+
+    return d_transition
+
+
 
 ### Input: Feature Matrix (phi), D (demonstration set)
 ### Output: Expected Feature Frequencies 
@@ -47,6 +112,17 @@ def initial_probabilities(n_states, n_actions, trajectories):
         initial[s, a] += 1
     return initial / len(trajectories)
 
+def sample_trajectories_from_policy(n_states, policy, start, terminal, n_trajectories=200):
+    # set up initial probabilities for trajectory generation
+    initial = np.zeros(n_states)
+    initial[start] = 1.0
+
+    # generate trajectories
+    policy_exec = T.stochastic_policy_adapter(policy)
+    tjs = list(T.generate_trajectories(n_trajectories,
+                                       world, policy_exec, initial, terminal))
+    return Demonstration(tjs, None)
+
 
 #Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
 # P_intial shape: (81, 8)  p_transition shape: (81, 81, 8)
@@ -77,6 +153,8 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
     if initial_omega is not None:
         omega = initial_omega.copy()
     delta = mean_error = np.inf 
+    optim.reset(omega)
+
     margin_list = [] # list of margin for each iteration
     margin = 1 # current margin; dummy margin set to start
     policy_list = [] # list of policy after each iteration
@@ -84,18 +162,19 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
     feature_expectations = []
     feature_expectations_temp = []
 
+    reward = nominal_rewards - features @ omega
+
     for i in range(burnout):
         print("Iteration: ", i)
         if i==0: #initialize variables
             # First, compute random policy. To do this, we need a reward function to use for value iteration.
-            reward = features @ omega # initial reward function
             q_function, v_function = RL.value_iteration(p_transition, reward, discount)
             policy = RL.stochastic_policy_from_q_value(q_function) #get policy from running RL with initial reward function
+            policy_exec = T.stochastic_policy_adapter(policy)
             policy_list.append(policy)
             #compute ef from this policy - renamed to D to match with paper
             d = forward(p_transition, p_initial, policy, terminal)
             df = (d[:, :, :, None] * features).sum((0, 1, 2))
-            print(df.shape)
             feature_expectations.append(df)
             omega_list.append(omega)
             margin_list.append(margin)
