@@ -96,10 +96,11 @@ def icrl(nominal_rewards, p_transition, features, terminal, trajectories, optim,
 
     # Don't count transitions that start with a terminal state
     features[terminal] = 0
-
     # compute static properties from trajectories
     e_features = ef_from_trajectories(features, trajectories)
     p_initial = initial_probabilities(n_states, n_actions, trajectories)
+    print(p_initial.shape)
+    print(p_transition.shape)
     nominal_rewards = np.array(nominal_rewards)
 
     omega = init(n_features)
@@ -116,7 +117,7 @@ def icrl(nominal_rewards, p_transition, features, terminal, trajectories, optim,
 
         # compute per-state reward
         reward = nominal_rewards - features @ omega
-
+        print(reward.shape)
         # Backward, Forward
         policy = backward_causal(p_transition, reward, terminal, discount)
 
@@ -157,7 +158,6 @@ def icrl(nominal_rewards, p_transition, features, terminal, trajectories, optim,
         epoch += 1
 
     print(f'Finished with MAE(best): {best_error: 0.15f}')
-    print(omega[:10])
     return best if best is not None else omega
 
 

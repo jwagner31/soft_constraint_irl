@@ -18,36 +18,6 @@ def ef_from_trajectories(features, trajectories):
 
     return fe / len(trajectories)
 
-def forward(p_transition, p_initial, policy, terminal, eps=1e-5):
-    # Don't allow transitions from terminal
-    p_t = np.moveaxis(p_transition.copy(), 1, 2)
-    p_terminal = p_t[terminal, :, :].copy()
-    p_t[terminal, :, :] = 0.0
-
-    d = p_initial.sum(1)
-    d_total = d
-
-    delta = np.inf
-    while delta > eps:
-        # state-action expected visitation
-        d_sa = d[:, None] * policy
-        # for each state s, multiply the expected visitations of all states to s by their probabilities
-        # d_s = sum(sa_ev[s_from, a] * p_t[s_from, a, s] for all s_from, a)
-        d_ = (d_sa[:, :, None] * p_t).sum((0, 1))
-
-        delta = np.max(np.abs(d - d_))
-        d = d_
-        d_total += d
-
-    p_t[terminal, :, :] = p_terminal
-    # Distribute the visitation stats of satate to their actions
-    d_sa = d_total[:, None] * policy
-
-    # Distribute state-action visitations to the next states
-    d_transition = d_sa[:, :, None] * p_t
-
-    return d_transition
-
 def feature_expectation_from_policy(features, policy):
     n_features = features.shape[-1]
     n_states, n_actions, _, _ = features.shape
@@ -77,7 +47,13 @@ def initial_probabilities(n_states, n_actions, trajectories):
         initial[s, a] += 1
     return initial / len(trajectories)
 
+
 #Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
+# P_intial shape: (81, 8)  p_transition shape: (81, 81, 8)
+
+# https://github.com/aaronsnoswell/irl_methods/blob/master/irl_methods/projection.py
+# https://github.com/rhklite/apprenticeship_inverse_RL/blob/master/Apprenticeship_Inverse_Reinforcement_Learning.ipynb
+
 
 ###
 def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
