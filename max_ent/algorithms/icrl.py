@@ -102,7 +102,6 @@ def icrl(nominal_rewards, p_transition, features, terminal, trajectories, optim,
     print(p_initial.shape)
     print(p_transition.shape)
     nominal_rewards = np.array(nominal_rewards)
-
     omega = init(n_features)
     if initial_omega is not None:
         omega = initial_omega.copy()

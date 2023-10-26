@@ -88,7 +88,7 @@ def generate_trajectory(world, policy, start, final, max_len=200):
 
     return Trajectory(trajectory), True
 
-def generate_trajectory(n_states, p_transition, policy, start, final, max_len=200):
+def generate_trajectory_noworld(n_states, p_transition, policy, start, final, max_len=200):
     """
     Generate a single trajectory.
 
@@ -185,7 +185,7 @@ def generate_trajectories(n, world, policy, start, final, discard_not_feasable=F
     return list_tr
 
 #taking out world paramater to use with mmp
-def generate_trajectories(n, n_states, p_transition, policy, start, final, discard_not_feasable=False):
+def generate_trajectories_noworld(n, n_states, p_transition, policy, start, final, discard_not_feasable=False):
     """
     Generate multiple trajectories.
 
@@ -223,7 +223,7 @@ def generate_trajectories(n, n_states, p_transition, policy, start, final, disca
         else:
             s = np.random.choice(start_states)
 
-        return generate_trajectory(n_states, p_transition, policy, s, final)
+        return generate_trajectory_noworld(n_states, p_transition, policy, s, final)
 
     list_tr = []
     for _ in range(n):
