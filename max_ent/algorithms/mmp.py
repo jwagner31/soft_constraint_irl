@@ -5,6 +5,7 @@ from max_ent.algorithms import rl as RL
 from numpy.linalg import norm
 import math
 import max_ent.gridworld.trajectory as T
+import scipy.special
 
 ### Input: Feature Matrix (phi), D (demonstration set), discount (gamma)
 ### Output: Expected Feature Frequencies 
@@ -54,11 +55,32 @@ def _softmax(x1, x2):
     x_min = np.minimum(x1, x2)
     return x_max + np.log(1.0 + np.exp(x_min - x_max))
 
-#Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
-# P_intial shape: (81, 8)  p_transition shape: (81, 81, 8)
+def value_iteration_new(p_transition, reward, discount, terminal, eps=1e-5):
+    """
+    Basic value-iteration algorithm to solve the given MDP, except reward function is different.
 
-# https://github.com/aaronsnoswell/irl_methods/blob/master/irl_methods/projection.py
-# https://github.com/rhklite/apprenticeship_inverse_RL/blob/master/Apprenticeship_Inverse_Reinforcement_Learning.ipynb
+    Args:
+        reward: The reward signal per state as table
+            `[state: Integer, action: Integer, state: Integer] -> reward: Float`.
+    """
+    n_states, _, n_actions = reward.shape
+
+    p_t = np.moveaxis(p_transition, 1, 2) # 
+
+""""
+def Qvalue_iteration(T, R, gamma=0.5, n_iters=10):
+    nA = R.shape[0]
+    nS = T.shape[0]
+    Q = np.zeros((nS,nA)) # initially
+    for _ in range(n_iters):
+        for s in range(nS): # for all states s
+            for a in range(nA): # for all actions a
+                sum_sp = 0
+                for s_ in range(nS): # for all reachable states s'
+                    sum_sp += (T[s][a][s_]*(R[s][a][s_] + gamma*max(Q[s_])))
+                Q[s][a] = sum_sp
+    return Q
+"""
 
 
 def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
@@ -113,7 +135,7 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
             omega_list.append(omega)
         else:
             if i==1:
-                nonexpert_feature_expectations_blended.append(nonexpert_feature_expectations[i-10])
+                nonexpert_feature_expectations_blended.append(nonexpert_feature_expectations[i-1])
                 omega = expert_features - nonexpert_feature_expectations[i-1]
                 omega_list.append(omega)
                 margin.append(norm((expert_features-nonexpert_feature_expectations_blended[i-1]), 2))
@@ -142,30 +164,10 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
 
 
 
+### NOTES
 
-"""
-        mu_e = expert_features 
-        mu_prev = nonexpert_feature_expectations[-1]
+#Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
+# P_intial shape: (81, 8)  p_transition shape: (81, 81, 8)
 
-        mu_prev_prev = nonexpert_feature_expectations[-2]
-        mu_bar_prev_prev = nonexpert_blended_feature_expectations[-2, :]
-
-        # The below finds the orthogonal projection of the expert's
-        # feature expectations onto the line through mu_prev and
-        # mu_prev_prev
-        mu_bar_prev = mu_bar_prev_prev \
-            + (mu_prev - mu_bar_prev_prev).T \
-                @ (mu_e - mu_bar_prev_prev) \
-            / (mu_prev - mu_bar_prev_prev).T \
-                @ (mu_prev - mu_bar_prev_prev) \
-            * (mu_prev - mu_bar_prev_prev)
-
-        nonexpert_blended_feature_expectations = np.vstack(
-            (
-                nonexpert_blended_feature_expectations,
-                mu_bar_prev
-            )
-        )
-
-
-"""
+# https://github.com/aaronsnoswell/irl_methods/blob/master/irl_methods/projection.py
+# https://github.com/rhklite/apprenticeship_inverse_RL/blob/master/Apprenticeship_Inverse_Reinforcement_Learning.ipynb
