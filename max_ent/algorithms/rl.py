@@ -72,3 +72,23 @@ def stochastic_policy_from_q_value(world, q_value, w=lambda x: x):
         an action given a state.
     """
     return scipy.special.softmax(w(q_value), 1)
+
+def stochastic_policy_from_q_value(q_value, w=lambda x: x):
+    """
+    Compute a stochastic policy from the given q-value function.
+    Args:
+        q_value: The q_value-function dictating the policy as table
+            `[state: Integer, action: Integer] -> value: Float`
+        w: A weighting function `(value: Float) -> value: Float` applied to
+            all state-action values before normalizing the results, which
+            are then used as probabilities. I.e. choosing `x -> 2*x` here
+            will cause the preference of suboptimal actions to decrease
+            quadratically compared to the preference of the optimal action 
+            as we are using a softmax distribution.
+    Returns:
+        The stochastic policy given the provided arguments as table
+        `[state: Integer, action: Integer] -> probability: Float`
+        describing a probability distribution p(action | state) of selecting
+        an action given a state.
+    """
+    return scipy.special.softmax(w(q_value), 1)
