@@ -14,7 +14,7 @@ def ef_from_trajectories(features, trajectories, discount):
     fe = np.zeros(n_features)
 
     for t in trajectories:
-        time_step = 0
+        time_step = 1
         for s, a, s_ in t.transitions():
             fe += features[s, a, s_, :] * discount ** time_step
             time_step += 1
@@ -91,7 +91,6 @@ def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, 
     policy = RL.stochastic_policy_from_q_value(q_function) #get policy from running RL with initial reward function
     policy_exec = T.stochastic_policy_adapter(policy)
     policy_list.append(policy)
-    discount = .4
 
     for i in range(burnout):
 
