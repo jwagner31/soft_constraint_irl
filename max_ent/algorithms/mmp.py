@@ -57,9 +57,6 @@ def _softmax(x1, x2):
 #Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
 # P_intial shape: (81, 8)  p_transition shape: (81, 81, 8)
 
-# https://github.com/aaronsnoswell/irl_methods/blob/master/irl_methods/projection.py
-# https://github.com/rhklite/apprenticeship_inverse_RL/blob/master/Apprenticeship_Inverse_Reinforcement_Learning.ipynb
-
 
 def mmp(nominal_rewards, p_transition, features, terminal, trajectories, optim, init, discount,
          eps=1e-4, eps_error=1e-2, burnout=10, max_iter=10000, max_penalty=200, log=None, initial_omega=None):
