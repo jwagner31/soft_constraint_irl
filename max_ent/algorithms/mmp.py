@@ -5,6 +5,8 @@ from max_ent.algorithms import rl as RL
 from numpy.linalg import norm
 import math
 import max_ent.gridworld.trajectory as T
+import max_ent.optim as O
+import scipy.special
 
 ### Input: Feature Matrix (phi), D (demonstration set), discount (gamma)
 ### Output: Expected Feature Frequencies 
@@ -20,13 +22,6 @@ def ef_from_trajectories(features, trajectories, discount):
             time_step += 1
 
     return fe / len(trajectories)
-
-
-def sigmoid(arry):
-    sig=[]
-    for i in arry:
-        sig.append(1/(1+math.exp(-i)))
-    return np.array(sig)
 
 
 ### Input: # of states, # of actions, D (Demonstration set)
@@ -49,10 +44,6 @@ def sample_trajectories_from_policy(n_states, policy, start, terminal, n_traject
                                        world, policy_exec, initial, terminal))
     return Demonstration(tjs, None)
 
-def _softmax(x1, x2):
-    x_max = np.maximum(x1, x2)
-    x_min = np.minimum(x1, x2)
-    return x_max + np.log(1.0 + np.exp(x_min - x_max))
 
 #Features shape: (81, 8, 81, 92)  Reward Shape: (81, 8, 81)  Policy shape: (81, 8)
 # P_intial shape: (81, 8)  p_transition shape: (81, 81, 8)
