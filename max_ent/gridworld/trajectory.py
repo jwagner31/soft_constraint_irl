@@ -42,7 +42,7 @@ class Trajectory:
         return "{}".format(self._t)
 
 
-def generate_trajectory(world, policy, start, final, max_len=200):
+def generate_trajectory(world, policy, start, final, max_len=200, more_random=False):
     """
     Generate a single trajectory.
 
@@ -81,7 +81,13 @@ def generate_trajectory(world, policy, start, final, max_len=200):
         next_s = range(world.n_states)
         next_p = world.p_transition[state, :, action]
 
+        random_number = np.random.rand()
         next_state = np.random.choice(next_s, p=next_p)
+        if more_random:
+            if random_number < 0.7:
+                next_state = np.random.choice(next_s, p=next_p)
+            else:
+                next_state = np.random.choice(next_s)
 
         trajectory.append((state, action, next_state))
         state = next_state
